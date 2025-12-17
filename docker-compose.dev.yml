@@ -2,32 +2,25 @@ version: '3.8'
 
 services:
   api:
-    <<: *app-config
+    build:
+      context: .
+      target: development
     container_name: cloud-anomaly-dev
     ports:
       - "8001:8000"
     environment:
-      - ENVIRONMENT=development
+      - ENVIRONMENT=dev
       - BUILD_TARGET=development
       - LOG_LEVEL=debug
+    env_file:
+      - .env.dev
     volumes:
-      - .:/app
-      - /app/.venv
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
-  postgres:
-    image: postgres:15
-    container_name: anomaly-postgres-dev
-    environment:
-      - POSTGRES_USER=dev_user
-      - POSTGRES_PASSWORD=dev_password
-      - POSTGRES_DB=anomaly_dev
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
+      - ./src:/app/src
+      - ./logs:/app/logs
+      - ./data:/app/data
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
-      - anomaly-network
+      - anomaly-dev-network
 
   redis:
     image: redis:7-alpine
@@ -35,12 +28,8 @@ services:
     ports:
       - "6380:6379"
     networks:
-      - anomaly-network
+      - anomaly-dev-network
 
 networks:
-  anomaly-network:
+  anomaly-dev-network:
     driver: bridge
-
-volumes:
-  postgres-data-dev:
-  redis-data-dev:

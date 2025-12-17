@@ -9,98 +9,37 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - ENVIRONMENT=production
+      - ENVIRONMENT=prod
+      - BUILD_TARGET=production
       - LOG_LEVEL=warning
     env_file:
       - .env.prod
     volumes:
       - ./logs:/app/logs:ro
-      - ./config/prod:/app/config:ro
+      - ./data:/app/data:ro
     networks:
-      - anomaly-network-prod
+      - anomaly-prod-network
     restart: always
-    deploy:
-      replicas: 3
-      update_config:
-        parallelism: 1
-        delay: 30s
-      restart_policy:
-        condition: on-failure
-
-  postgres:
-    image: postgres:15
-    container_name: anomaly-postgres-prod
-    environment:
-      - POSTGRES_USER=${PROD_DB_USER}
-      - POSTGRES_PASSWORD=${PROD_DB_PASSWORD}
-      - POSTGRES_DB=${PROD_DB_NAME}
-    volumes:
-      - postgres-data-prod:/var/lib/postgresql/data
-      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf
-    command: postgres -c config_file=/etc/postgresql/postgresql.conf
-    networks:
-      - anomaly-network-prod
-    restart: always
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   redis:
     image: redis:7-alpine
     container_name: anomaly-redis-prod
+    command: redis-server --appendonly yes
     volumes:
-      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
+      - redis-data-prod:/data
     networks:
-      - anomaly-network-prod
-    restart: always
-
-  # Full monitoring stack
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus-prod
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./config/prometheus.prod.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data-prod:/prometheus
-    networks:
-      - anomaly-network-prod
-    restart: always
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana-prod
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
-    volumes:
-      - grafana-data-prod:/var/lib/grafana
-      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
-    networks:
-      - anomaly-network-prod
-    restart: always
-
-  nginx:
-    image: nginx:alpine
-    container_name: nginx-prod
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./config/nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl:ro
-    networks:
-      - anomaly-network-prod
-    depends_on:
-      - api
+      - anomaly-prod-network
     restart: always
 
 networks:
-  anomaly-network-prod:
+  anomaly-prod-network:
     driver: bridge
 
 volumes:
-  postgres-data-prod:
   redis-data-prod:
-  prometheus-data-prod:
-  grafana-data-prod:

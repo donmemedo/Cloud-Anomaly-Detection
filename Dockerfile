@@ -1,4 +1,6 @@
-# Build stage
+# Multi-stage build for Cloud-Anomaly-Detection
+
+# ========== BUILDER STAGE ==========
 FROM python:3.10-slim as builder
 
 WORKDIR /app
@@ -14,11 +16,11 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install dependencies
+# Copy and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Development stage
+# ========== DEVELOPMENT STAGE ==========
 FROM python:3.10-slim as development
 
 WORKDIR /app
@@ -27,24 +29,25 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy application
-COPY . .
+# Copy application source
+COPY src/ ./src/
+COPY requirements.txt .
+COPY sample_usage.py .
+COPY run.sh .
 
 # Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app && \
+    chmod +x run.sh
 USER appuser
 
 # Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=2)" || exit 1
-
 # Development command (with hot reload)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-# Production stage
+# ========== PRODUCTION STAGE ==========
 FROM python:3.10-slim as production
 
 WORKDIR /app
@@ -54,20 +57,23 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy only necessary files
-COPY main.py .
-COPY config/ ./config/
-COPY models/ ./models/
+COPY src/ ./src/
+COPY requirements.txt .
+COPY run.sh .
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+# Create non-root user and directories
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p logs && \
+    chown -R appuser:appuser /app && \
+    chmod +x run.sh
 USER appuser
 
 # Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=2)" || exit 1
 
 # Production command
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

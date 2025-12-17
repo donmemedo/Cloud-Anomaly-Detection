@@ -1,40 +1,50 @@
-.PHONY: help install test run build deploy clean
+.PHONY: help install test run-dev run-stg run-prod build clean
 
 help:
 	@echo "Available commands:"
+	@echo "  make help       Show this help"
 	@echo "  make install    Install dependencies"
 	@echo "  make test       Run tests"
-	@echo "  make run-dev    Run development server"
+	@echo "  make run-dev    Run development server locally"
+	@echo "  make run-stg    Run staging server locally"
+	@echo "  make run-prod   Run production server locally"
 	@echo "  make build-dev  Build development Docker image"
 	@echo "  make build-stg  Build staging Docker image"
 	@echo "  make build-prod Build production Docker image"
-	@echo "  make deploy-dev Deploy to development"
+	@echo "  make up-dev     Start development containers"
+	@echo "  make up-stg     Start staging containers"
+	@echo "  make up-prod    Start production containers"
+	@echo "  make down-dev   Stop development containers"
+	@echo "  make down-stg   Stop staging containers"
+	@echo "  make down-prod  Stop production containers"
+	@echo "  make logs-dev   Show development logs"
+	@echo "  make logs-stg   Show staging logs"
+	@echo "  make logs-prod  Show production logs"
 	@echo "  make clean      Clean up temporary files"
 
 install:
 	pip install -r requirements.txt
-	pip install -r requirements-dev.txt
 
 test:
-	pytest tests/ -v --cov=main
+	python -m pytest tests/ -v
 
 run-dev:
-	ENVIRONMENT=dev uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+	ENVIRONMENT=dev python src/main.py
 
 run-stg:
-	ENVIRONMENT=stg uvicorn main:app --host 0.0.0.0 --port 8002
+	ENVIRONMENT=stg python src/main.py
 
 run-prod:
-	ENVIRONMENT=prod uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+	ENVIRONMENT=prod python src/main.py
 
 build-dev:
-	docker-compose -f docker-compose.dev.yml build
+	docker build --target development -t cloud-anomaly-dev .
 
 build-stg:
-	docker-compose -f docker-compose.stg.yml build
+	docker build --target production -t cloud-anomaly-stg .
 
 build-prod:
-	docker-compose -f docker-compose.prod.yml build
+	docker build --target production -t cloud-anomaly-prod .
 
 up-dev:
 	docker-compose -f docker-compose.dev.yml up -d
@@ -45,11 +55,14 @@ up-stg:
 up-prod:
 	docker-compose -f docker-compose.prod.yml up -d
 
-deploy-dev: build-dev up-dev
+down-dev:
+	docker-compose -f docker-compose.dev.yml down
 
-deploy-stg: build-stg up-stg
+down-stg:
+	docker-compose -f docker-compose.stg.yml down
 
-deploy-prod: build-prod up-prod
+down-prod:
+	docker-compose -f docker-compose.prod.yml down
 
 logs-dev:
 	docker-compose -f docker-compose.dev.yml logs -f
@@ -65,6 +78,5 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type f -name "*.pyo" -delete
 	find . -type f -name ".coverage" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -type d -name "htmlcov" -exec rm -rf {} +
