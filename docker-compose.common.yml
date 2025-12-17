@@ -1,0 +1,24 @@
+version: '3.8'
+
+x-app-config: &app-config
+  build:
+    context: .
+    target: ${BUILD_TARGET:-development}
+  env_file:
+    - .env.${ENVIRONMENT:-dev}
+  volumes:
+    - ./logs:/app/logs
+    - ./config:/app/config
+  networks:
+    - anomaly-network
+  restart: unless-stopped
+
+networks:
+  anomaly-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

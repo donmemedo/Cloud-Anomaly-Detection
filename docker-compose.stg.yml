@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      target: production
+    container_name: cloud-anomaly-stg
+    ports:
+      - "8002:8000"
+    environment:
+      - ENVIRONMENT=staging
+      - LOG_LEVEL=info
+    env_file:
+      - .env.stg
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - anomaly-network-stg
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: anomaly-postgres-stg
+    environment:
+      - POSTGRES_USER=${STG_DB_USER}
+      - POSTGRES_PASSWORD=${STG_DB_PASSWORD}
+      - POSTGRES_DB=${STG_DB_NAME}
+    volumes:
+      - postgres-data-stg:/var/lib/postgresql/data
+    networks:
+      - anomaly-network-stg
+
+  redis:
+    image: redis:7-alpine
+    container_name: anomaly-redis-stg
+    networks:
+      - anomaly-network-stg
+
+  # Monitoring in staging
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-stg
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./config/prometheus.stg.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - anomaly-network-stg
+
+networks:
+  anomaly-network-stg:
+    driver: bridge
+
+volumes:
+  postgres-data-stg:
+  redis-data-stg:
