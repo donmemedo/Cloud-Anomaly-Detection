@@ -23,7 +23,7 @@ services:
       - anomaly-dev-network
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.8.3-alpine
     container_name: anomaly-redis-dev
     ports:
       - "6380:6379"

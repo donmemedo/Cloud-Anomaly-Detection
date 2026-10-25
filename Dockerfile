@@ -1,7 +1,7 @@
 # Multi-stage build for Cloud-Anomaly-Detection
 
 # ========== BUILDER STAGE ==========
-FROM python:3.10-slim as builder
+FROM python:3.13.6-alpine as builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ========== DEVELOPMENT STAGE ==========
-FROM python:3.10-slim as development
+FROM python:3.13.6-alpine as development
 
 WORKDIR /app
 
@@ -48,7 +48,7 @@ EXPOSE 8000
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # ========== PRODUCTION STAGE ==========
-FROM python:3.10-slim as production
+FROM python:3.13.6-alpine as production
 
 WORKDIR /app
 

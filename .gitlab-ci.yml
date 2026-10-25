@@ -25,7 +25,7 @@ workflow:
 # ========== VALIDATION ==========
 validate:
   stage: validate
-  image: python:3.10
+  image: python:3.13.6
   script:
     - python --version
     - pip install -r requirements.txt
@@ -41,7 +41,7 @@ validate:
 # ========== TEST ==========
 test:dev:
   stage: test
-  image: python:3.10
+  image: python:3.13.6
   variables:
     ENVIRONMENT: dev
   before_script:
@@ -62,7 +62,7 @@ test:dev:
 
 test:stg:
   stage: test
-  image: python:3.10
+  image: python:3.13.6
   variables:
     ENVIRONMENT: stg
   before_script:
@@ -79,7 +79,7 @@ test:stg:
 
 test:prod:
   stage: test
-  image: python:3.10
+  image: python:3.13.6
   variables:
     ENVIRONMENT: prod
   before_script:
